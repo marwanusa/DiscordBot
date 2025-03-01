@@ -6,8 +6,8 @@ const express = require('express');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const CHANNEL_ID = process.env.CHANNEL_ID; // معرف القناة مخفي في .env
-const BOT_TOKEN = process.env.BOT_TOKEN; // توكن البوت مخفي في .env
+const CHANNEL_ID = process.env.CHANNEL_ID; 
+const BOT_TOKEN = process.env.BOT_TOKEN; 
 
 app.get('/', (req, res) => {
     res.send('Bot is running!');
