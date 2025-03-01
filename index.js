@@ -66,13 +66,13 @@ async function getMaghribTime() {
 
 function add30Minutes(time) {
     const [hours, minutes] = time.split(':').map(Number);
-    let newHours = hours + 4;
-
-    if (newHours >= 24) {
-        newHours -= 24; // لضبط الوقت إذا تجاوز منتصف الليل
+    let newMinutes = minutes + 30;
+    let newHours = hours;
+    if (newMinutes >= 60) {
+        newMinutes -= 60;
+        newHours += 1;
     }
-
-    return `${String(newHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
 }
 
 client.once('ready', async () => {
