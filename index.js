@@ -48,7 +48,7 @@ const images = [
     'https://i.redd.it/cjshkftawwoc1.jpeg',
     'https://preview.redd.it/thread-%D8%AA%D9%85-%D8%AA%D8%B9%D8%A8%D8%A6%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%B4-%D8%A8%D9%86%D8%AC%D8%A7%D8%AD-v0-lis3z96d0joc1.jpeg?width=720&format=pjpg&auto=webp&s=0a1163f2a11c37e1149832f0115a340d516738db',
     'https://www.meme-arsenal.com/memes/0c6bf3215d19acffcbe63bc339c2bd7c.jpg',
-    'https://preview.redd.it/the-last-%D8%AA%D9%85-%D8%AA%D8%B9%D8%A8%D8%A6%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%B4-%D8%A8%D9%86%D8%AC%D8%A7%D8%AD-v0-uynwte8n7itc1.jpeg?width=640&crop=smart&auto=webp&s=63b11ca8f0951b4f49fb3c5c8f2325a8029465a5',
+    'https://www.meme-arsenal.com/memes/0c6bf3215d19acffcbe63bc339c2bd7c.jpg',
 ];
 
 let currentDay = 0;
