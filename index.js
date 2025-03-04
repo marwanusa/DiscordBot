@@ -51,7 +51,7 @@ const images = [
     'https://www.meme-arsenal.com/memes/0c6bf3215d19acffcbe63bc339c2bd7c.jpg',
 ];
 
-let currentDay = 0;
+let currentDay = 4;
 
 async function getMaghribTime() {
     try {
@@ -77,28 +77,39 @@ function add30Minutes(time) {
 
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}`);
-    
-    const maghribTime = await getMaghribTime();
-    if (!maghribTime) return;
-    
-    const postTime = add30Minutes(maghribTime);
-    
-    cron.schedule(`0 ${maghribTime.split(':')[1]} ${maghribTime.split(':')[0]} * * *`, () => {
-        const channel = client.channels.cache.get(CHANNEL_ID);
-        if (channel && currentDay < 29) {
-            channel.send('(اللهم لكَ صمت وعلى رزقك أفطرت، ذهب الظمأ وابتلت العروق وثبت الأجر إن شاء الله)');
-            currentDay++;
-        }
+
+    async function scheduleIftarMessage() {
+        const maghribTime = await getMaghribTime();
+        if (!maghribTime) return;
+
+        const postTime = add30Minutes(maghribTime);
+
+        cron.schedule(`0 ${maghribTime.split(':')[1]} ${maghribTime.split(':')[0]} * * *`, () => {
+            const channel = client.channels.cache.get(CHANNEL_ID);
+            if (channel && currentDay < 29) {
+                channel.send("O Allah! I fasted for You, and I break my fast with Your sustenance. Thirst has gone, veins are moistened, and the reward is confirmed, In Sha Allah.");
+                currentDay++;
+            }
+        }, { timezone: 'Africa/Cairo' });
+
+        cron.schedule(`0 ${postTime.split(':')[1]} ${postTime.split(':')[0]} * * *`, () => {
+            const channel = client.channels.cache.get(CHANNEL_ID);
+            if (channel && currentDay <= 29) {
+                channel.send(images[currentDay % images.length]);
+            }
+        }, { timezone: 'Africa/Cairo' });
+
+        console.log(`Iftar message scheduled at: ${maghribTime}, Image post at: ${postTime}`);
+    }
+
+    // Daily update for Maghrib time
+    cron.schedule('0 0 * * *', async () => {
+        console.log("Updating daily Maghrib time...");
+        await scheduleIftarMessage();
     }, { timezone: 'Africa/Cairo' });
 
-    cron.schedule(`0 ${postTime.split(':')[1]} ${postTime.split(':')[0]} * * *`, () => {
-        const channel = client.channels.cache.get(CHANNEL_ID);
-        if (channel && currentDay <= 29) {
-            channel.send(images[currentDay % images.length]);
-        }
-    }, { timezone: 'Africa/Cairo' });
-
-    console.log(`رسالة الإفطار سترسل عند ${maghribTime}، والصورة عند ${postTime}.`);
+    // Initial schedule when the bot starts
+    await scheduleIftarMessage();
 });
 
 client.login(BOT_TOKEN);
