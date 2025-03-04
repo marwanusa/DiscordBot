@@ -87,7 +87,7 @@ client.once('ready', async () => {
         cron.schedule(`0 ${maghribTime.split(':')[1]} ${maghribTime.split(':')[0]} * * *`, () => {
             const channel = client.channels.cache.get(CHANNEL_ID);
             if (channel && currentDay < 29) {
-                channel.send("O Allah! I fasted for You, and I break my fast with Your sustenance. Thirst has gone, veins are moistened, and the reward is confirmed, In Sha Allah.");
+                channel.send("(اللهم لكَ صمت وعلى رزقك أفطرت، ذهب الظمأ وابتلت العروق وثبت الأجر إن شاء الله)");
                 currentDay++;
             }
         }, { timezone: 'Africa/Cairo' });
