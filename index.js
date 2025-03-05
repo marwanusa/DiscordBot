@@ -31,9 +31,9 @@ const images = [
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbgZ__LdsiVoCkP52yuMeVa0tCcYl-iB0Auw&s',
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4tppsTiYKRWB0jqJ1PCKofvXFewUOS2yOvg&s',
     'https://preview.redd.it/%D8%AA%D9%85-%D8%AA%D8%B9%D8%A8%D8%A6%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%B4-%D8%A8%D9%86%D8%AC%D8%A7%D8%AD-v0-3bomrdtd4dpa1.jpg?width=1080&crop=smart&auto=webp&s=9b7988a29aae0c817b143b0810b0b4e136cfa895',
-    'https://media.tenor.com/71-zPuxWISIAAAAe/%D8%AA%D9%85-%D8%AA%D8%B9%D8%A8%D8%A6%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%B4-%D8%A8%D9%86%D8%AC%D8%A7%D8%AD-good-morning.png',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtBHB0d48-SGSlHrLHrsmgaYGObQMXq-7_og&s',
     'https://i.pinimg.com/736x/0a/6f/8d/0a6f8d77b9bb7e56bf4a494cef9b3ff9.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtBHB0d48-SGSlHrLHrsmgaYGObQMXq-7_og&s',
+    'https://media.tenor.com/71-zPuxWISIAAAAe/%D8%AA%D9%85-%D8%AA%D8%B9%D8%A8%D8%A6%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%B4-%D8%A8%D9%86%D8%AC%D8%A7%D8%AD-good-morning.png',
     'https://pbs.twimg.com/media/Fr6hCm1X0AAe_LS.jpg',
     'https://i.pinimg.com/736x/47/79/e6/4779e6e3c501c0cd0de16e128293a5e7.jpg',
     'https://pbs.twimg.com/media/EXB3uq0XQAEvMIo.jpg',
@@ -48,10 +48,9 @@ const images = [
     'https://i.redd.it/cjshkftawwoc1.jpeg',
     'https://preview.redd.it/thread-%D8%AA%D9%85-%D8%AA%D8%B9%D8%A8%D8%A6%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%B4-%D8%A8%D9%86%D8%AC%D8%A7%D8%AD-v0-lis3z96d0joc1.jpeg?width=720&format=pjpg&auto=webp&s=0a1163f2a11c37e1149832f0115a340d516738db',
     'https://www.meme-arsenal.com/memes/0c6bf3215d19acffcbe63bc339c2bd7c.jpg',
-    'https://www.meme-arsenal.com/memes/0c6bf3215d19acffcbe63bc339c2bd7c.jpg',
 ];
 
-let currentDay = 4;
+let currentDay = 3;
 
 async function getMaghribTime() {
     try {
@@ -95,7 +94,7 @@ client.once('ready', async () => {
         cron.schedule(`0 ${postTime.split(':')[1]} ${postTime.split(':')[0]} * * *`, () => {
             const channel = client.channels.cache.get(CHANNEL_ID);
             if (channel && currentDay <= 29) {
-                channel.send(images[currentDay % images.length]);
+                channel.send(images[currentDay]);
             }
         }, { timezone: 'Africa/Cairo' });
 
