@@ -50,27 +50,33 @@ const images = [
     'https://www.meme-arsenal.com/memes/0c6bf3215d19acffcbe63bc339c2bd7c.jpg',
 ];
 
-let currentDay = 3;
+let currentDay = 4;
 
-async function getMaghribTime() {
+async function getPrayerTimes() {
     try {
         const today = new Date().toISOString().split('T')[0];
         const response = await axios.get(`https://api.aladhan.com/v1/timingsByCity/${today}?country=EG&city=Cairo`);
-        return response.data.data.timings.Maghrib;
+        return response.data.data.timings;
     } catch (error) {
-        console.error('خطأ في جلب وقت صلاة المغرب:', error);
+        console.error('خطأ في جلب أوقات الصلاة:', error);
         return null;
     }
 }
 
-function add30Minutes(time) {
+function addMinutes(time, minutesToAdd) {
     const [hours, minutes] = time.split(':').map(Number);
-    let newMinutes = minutes + 30;
-    let newHours = hours;
-    if (newMinutes >= 60) {
-        newMinutes -= 60;
-        newHours += 1;
-    }
+    let totalMinutes = hours * 60 + minutes + minutesToAdd;
+    let newHours = Math.floor(totalMinutes / 60) % 24;
+    let newMinutes = totalMinutes % 60;
+    return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
+}
+
+function subtractMinutes(time, minutesToSubtract) {
+    let [hours, minutes] = time.split(':').map(Number);
+    let totalMinutes = hours * 60 + minutes - minutesToSubtract;
+    if (totalMinutes < 0) totalMinutes += 24 * 60;
+    let newHours = Math.floor(totalMinutes / 60);
+    let newMinutes = totalMinutes % 60;
     return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
 }
 
@@ -78,11 +84,11 @@ client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}`);
 
     async function scheduleIftarMessage() {
-        const maghribTime = await getMaghribTime();
-        if (!maghribTime) return;
+        const timings = await getPrayerTimes();
+        if (!timings) return;
 
-        const postTime = add30Minutes(maghribTime);
-
+        const maghribTime = timings.Maghrib;
+        const postTime = addMinutes(maghribTime, 30); 
         cron.schedule(`0 ${maghribTime.split(':')[1]} ${maghribTime.split(':')[0]} * * *`, () => {
             const channel = client.channels.cache.get(CHANNEL_ID);
             if (channel && currentDay < 29) {
@@ -101,14 +107,33 @@ client.once('ready', async () => {
         console.log(`Iftar message scheduled at: ${maghribTime}, Image post at: ${postTime}`);
     }
 
-    // Daily update for Maghrib time
-    cron.schedule('0 0 * * *', async () => {
-        console.log("Updating daily Maghrib time...");
-        await scheduleIftarMessage();
-    }, { timezone: 'Africa/Cairo' });
+    async function scheduleFajrMessage() {
+        const timings = await getPrayerTimes();
+        if (!timings) return;
 
-    // Initial schedule when the bot starts
+        const fajrTime = timings.Fajr;
+        const sendTime = subtractMinutes(fajrTime, 90); 
+
+        cron.schedule(`0 ${sendTime.split(':')[1]} ${sendTime.split(':')[0]} * * *`, () => {
+            const channel = client.channels.cache.get(CHANNEL_ID);
+            if (channel) {
+                channel.send({ files: ["./sahoor_video.mp4"] });
+            }
+        }, { timezone: 'Africa/Cairo' });
+
+        console.log(`Fajr reminder scheduled at: ${sendTime}`);
+    }
+
+
     await scheduleIftarMessage();
+    await scheduleFajrMessage();
+
+
+    cron.schedule('0 0 * * *', async () => {
+        console.log("Updating daily prayer times...");
+        await scheduleIftarMessage();
+        await scheduleFajrMessage();
+    }, { timezone: 'Africa/Cairo' });
 });
 
 client.login(BOT_TOKEN);
