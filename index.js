@@ -6,7 +6,7 @@ const express = require('express');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const CHANNEL_ID = process.env.CHANNEL_ID; 
+const CHANNEL_NAME = process.env.CHANNEL_NAME; // اسم القناة بدلاً من ID
 const BOT_TOKEN = process.env.BOT_TOKEN; 
 
 app.get('/', (req, res) => {
@@ -24,8 +24,6 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
     ],
 });
-
-
 
 const images = [
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbgZ__LdsiVoCkP52yuMeVa0tCcYl-iB0Auw&s',
@@ -49,8 +47,7 @@ const images = [
     'https://preview.redd.it/thread-%D8%AA%D9%85-%D8%AA%D8%B9%D8%A8%D8%A6%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%B4-%D8%A8%D9%86%D8%AC%D8%A7%D8%AD-v0-lis3z96d0joc1.jpeg?width=720&format=pjpg&auto=webp&s=0a1163f2a11c37e1149832f0115a340d516738db',
     'https://www.meme-arsenal.com/memes/0c6bf3215d19acffcbe63bc339c2bd7c.jpg',
 ];
-
-let currentDay = 4;
+let currentDay = 5;
 
 async function getPrayerTimes() {
     try {
@@ -83,28 +80,36 @@ function subtractMinutes(time, minutesToSubtract) {
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}`);
 
+    async function findChannelByName(guild, name) {
+        return guild.channels.cache.find(channel => channel.name === name);
+    }
+
     async function scheduleIftarMessage() {
         const timings = await getPrayerTimes();
         if (!timings) return;
 
         const maghribTime = timings.Maghrib;
         const postTime = addMinutes(maghribTime, 30); 
-        cron.schedule(`0 ${maghribTime.split(':')[1]} ${maghribTime.split(':')[0]} * * *`, () => {
-            const channel = client.channels.cache.get(CHANNEL_ID);
-            if (channel && currentDay < 29) {
-                channel.send("(اللهم لكَ صمت وعلى رزقك أفطرت، ذهب الظمأ وابتلت العروق وثبت الأجر إن شاء الله)");
-                currentDay++;
-            }
-        }, { timezone: 'Africa/Cairo' });
 
-        cron.schedule(`0 ${postTime.split(':')[1]} ${postTime.split(':')[0]} * * *`, () => {
-            const channel = client.channels.cache.get(CHANNEL_ID);
-            if (channel && currentDay <= 29) {
-                channel.send(images[currentDay]);
-            }
-        }, { timezone: 'Africa/Cairo' });
+        client.guilds.cache.forEach(async (guild) => {
+            const channel = await findChannelByName(guild, CHANNEL_NAME);
+            if (!channel) return;
 
-        console.log(`Iftar message scheduled at: ${maghribTime}, Image post at: ${postTime}`);
+            cron.schedule(`0 ${maghribTime.split(':')[1]} ${maghribTime.split(':')[0]} * * *`, () => {
+                if (currentDay < 29) {
+                    channel.send("(اللهم لكَ صمت وعلى رزقك أفطرت، ذهب الظمأ وابتلت العروق وثبت الأجر إن شاء الله)");
+                    currentDay++;
+                }
+            }, { timezone: 'Africa/Cairo' });
+
+            cron.schedule(`0 ${postTime.split(':')[1]} ${postTime.split(':')[0]} * * *`, () => {
+                if (currentDay <= 29) {
+                    channel.send(images[currentDay]);
+                }
+            }, { timezone: 'Africa/Cairo' });
+
+            console.log(`Iftar message scheduled at: ${maghribTime}, Image post at: ${postTime}`);
+        });
     }
 
     async function scheduleFajrMessage() {
@@ -114,20 +119,20 @@ client.once('ready', async () => {
         const fajrTime = timings.Fajr;
         const sendTime = subtractMinutes(fajrTime, 90); 
 
-        cron.schedule(`0 ${sendTime.split(':')[1]} ${sendTime.split(':')[0]} * * *`, () => {
-            const channel = client.channels.cache.get(CHANNEL_ID);
-            if (channel) {
+        client.guilds.cache.forEach(async (guild) => {
+            const channel = await findChannelByName(guild, CHANNEL_NAME);
+            if (!channel) return;
+
+            cron.schedule(`0 ${sendTime.split(':')[1]} ${sendTime.split(':')[0]} * * *`, () => {
                 channel.send({ files: ["./sahoor_video.mp4"] });
-            }
-        }, { timezone: 'Africa/Cairo' });
+            }, { timezone: 'Africa/Cairo' });
 
-        console.log(`Fajr reminder scheduled at: ${sendTime}`);
+            console.log(`Fajr reminder scheduled at: ${sendTime}`);
+        });
     }
-
 
     await scheduleIftarMessage();
     await scheduleFajrMessage();
-
 
     cron.schedule('0 0 * * *', async () => {
         console.log("Updating daily prayer times...");
