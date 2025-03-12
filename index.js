@@ -6,8 +6,8 @@ const express = require('express');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const CHANNEL_NAME = process.env.CHANNEL_NAME; // اسم القناة بدلاً من ID
-const BOT_TOKEN = process.env.BOT_TOKEN; 
+const CHANNEL_NAME = process.env.CHANNEL_NAME;
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
 app.get('/', (req, res) => {
     res.send('Bot is running!');
@@ -47,16 +47,16 @@ const images = [
     'https://preview.redd.it/thread-%D8%AA%D9%85-%D8%AA%D8%B9%D8%A8%D8%A6%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%B4-%D8%A8%D9%86%D8%AC%D8%A7%D8%AD-v0-lis3z96d0joc1.jpeg?width=720&format=pjpg&auto=webp&s=0a1163f2a11c37e1149832f0115a340d516738db',
     'https://www.meme-arsenal.com/memes/0c6bf3215d19acffcbe63bc339c2bd7c.jpg',
 ];
-let currentDay = 5;
+let currentDay = 9;
+let prayerTimes = null;
 
 async function getPrayerTimes() {
     try {
         const today = new Date().toISOString().split('T')[0];
         const response = await axios.get(`https://api.aladhan.com/v1/timingsByCity/${today}?country=EG&city=Cairo`);
-        return response.data.data.timings;
+        prayerTimes = response.data.data.timings;
     } catch (error) {
         console.error('خطأ في جلب أوقات الصلاة:', error);
-        return null;
     }
 }
 
@@ -84,61 +84,55 @@ client.once('ready', async () => {
         return guild.channels.cache.find(channel => channel.name === name);
     }
 
-    async function scheduleIftarMessage() {
-        const timings = await getPrayerTimes();
-        if (!timings) return;
+    async function scheduleMessages() {
+        await getPrayerTimes();
+        if (!prayerTimes) return;
 
-        const maghribTime = timings.Maghrib;
-        const postTime = addMinutes(maghribTime, 30); 
+        const maghribTime = prayerTimes.Maghrib;
+        const postTime = addMinutes(maghribTime, 30);
+        const fajrTime = prayerTimes.Fajr;
+        const sahoorTime = subtractMinutes(fajrTime, 90);
 
-        client.guilds.cache.forEach(async (guild) => {
-            const channel = await findChannelByName(guild, CHANNEL_NAME);
-            if (!channel) return;
+        const sentMessages = new Set(); // لمنع التكرار
 
-            cron.schedule(`0 ${maghribTime.split(':')[1]} ${maghribTime.split(':')[0]} * * *`, () => {
-                if (currentDay < 29) {
-                    channel.send("(اللهم لكَ صمت وعلى رزقك أفطرت، ذهب الظمأ وابتلت العروق وثبت الأجر إن شاء الله)");
-                    currentDay++;
+        cron.schedule(`0 ${maghribTime.split(':')[1]} ${maghribTime.split(':')[0]} * * *`, async () => {
+            if (currentDay < 29 && !sentMessages.has(`iftar_${currentDay}`)) {
+                for (const guild of client.guilds.cache.values()) {
+                    const channel = await findChannelByName(guild, CHANNEL_NAME);
+                    if (channel) channel.send("(اللهم لكَ صمت وعلى رزقك أفطرت، ذهب الظمأ وابتلت العروق وثبت الأجر إن شاء الله)");
                 }
-            }, { timezone: 'Africa/Cairo' });
+                sentMessages.add(`iftar_${currentDay}`);
+                currentDay++;
+            }
+        }, { timezone: 'Africa/Cairo' });
 
-            cron.schedule(`0 ${postTime.split(':')[1]} ${postTime.split(':')[0]} * * *`, () => {
-                if (currentDay <= 29) {
-                    channel.send(images[currentDay]);
+        cron.schedule(`0 ${postTime.split(':')[1]} ${postTime.split(':')[0]} * * *`, async () => {
+            if (currentDay <= 29 && !sentMessages.has(`image_${currentDay}`)) {
+                for (const guild of client.guilds.cache.values()) {
+                    const channel = await findChannelByName(guild, CHANNEL_NAME);
+                    if (channel) channel.send(images[currentDay]);
                 }
-            }, { timezone: 'Africa/Cairo' });
+                sentMessages.add(`image_${currentDay}`);
+            }
+        }, { timezone: 'Africa/Cairo' });
 
-            console.log(`Iftar message scheduled at: ${maghribTime}, Image post at: ${postTime}`);
-        });
+        cron.schedule(`0 ${sahoorTime.split(':')[1]} ${sahoorTime.split(':')[0]} * * *`, async () => {
+            for (const guild of client.guilds.cache.values()) {
+                const channel = await findChannelByName(guild, CHANNEL_NAME);
+                if (channel) channel.send({ files: ["./sahoor_video.mp4"] });
+            }
+        }, { timezone: 'Africa/Cairo' });
+
+        console.log(`Messages scheduled for Maghrib (${maghribTime}), Iftar Image (${postTime}), and Sahoor Reminder (${sahoorTime}).`);
     }
 
-    async function scheduleFajrMessage() {
-        const timings = await getPrayerTimes();
-        if (!timings) return;
-
-        const fajrTime = timings.Fajr;
-        const sendTime = subtractMinutes(fajrTime, 90); 
-
-        client.guilds.cache.forEach(async (guild) => {
-            const channel = await findChannelByName(guild, CHANNEL_NAME);
-            if (!channel) return;
-
-            cron.schedule(`0 ${sendTime.split(':')[1]} ${sendTime.split(':')[0]} * * *`, () => {
-                channel.send({ files: ["./sahoor_video.mp4"] });
-            }, { timezone: 'Africa/Cairo' });
-
-            console.log(`Fajr reminder scheduled at: ${sendTime}`);
-        });
-    }
-
-    await scheduleIftarMessage();
-    await scheduleFajrMessage();
+    await scheduleMessages();
 
     cron.schedule('0 0 * * *', async () => {
         console.log("Updating daily prayer times...");
-        await scheduleIftarMessage();
-        await scheduleFajrMessage();
+        await scheduleMessages();
     }, { timezone: 'Africa/Cairo' });
 });
 
 client.login(BOT_TOKEN);
+
